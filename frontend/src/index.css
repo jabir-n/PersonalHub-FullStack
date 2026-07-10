@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+
+* {
+  transition: all 0.05s ease;
+}
+
+html {
+  scroll-behavior: smooth;
+}
