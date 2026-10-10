@@ -15,7 +15,8 @@ function Dashboard({
   searchTerm,
   links,
   setLinks,
-  categories
+  categories,
+  setCategories,
 }) {
 
   const getHeading = () => {
@@ -131,6 +132,7 @@ function Dashboard({
         setLinks={setLinks}
         searchTerm={searchTerm}
         categories={categories}
+        setCategories={setCategories}
       />
 
     </motion.div >

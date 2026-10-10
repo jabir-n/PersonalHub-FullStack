@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { motion } from "framer-motion"
 import SortableLinkCard from "./SortableLinkCard"
 import {
@@ -12,356 +12,312 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable"
 
-import { Toaster } from "react-hot-toast"
+import { toast } from "react-toastify"
+import Swal from "sweetalert2"
+
+const API_BASE = "http://127.0.0.1:8000/api"
+
+// Pure helper — doesn't need to live inside the component,
+// so it's not recreated on every render.
+const getLogo = (url) => {
+  try {
+    const domain = new URL(url).hostname
+    return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`
+  } catch {
+    return "https://cdn-icons-png.flaticon.com/512/25/25231.png"
+  }
+}
+
+// Shared authenticated fetch — replaces the repeated
+// token + headers boilerplate in every handler.
+async function authFetch(path, options = {}) {
+  const token = localStorage.getItem("access")
+
+  const response = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers: {
+      ...(options.body ? { "Content-Type": "application/json" } : {}),
+      Authorization: `Bearer ${token}`,
+      ...options.headers,
+    },
+  })
+
+  return response
+}
 
 function QuickLinks({
   selectedMenu,
   links,
   setLinks,
   searchTerm,
-  categories
+  categories,
+  setCategories,
 }) {
-
   const [siteName, setSiteName] = useState("")
   const [siteUrl, setSiteUrl] = useState("")
   const [category, setCategory] = useState("")
+  const [showCategoryModal, setShowCategoryModal] = useState(false)
+  const [newCategory, setNewCategory] = useState("")
   const [editingId, setEditingId] = useState(null)
 
-  const [editName, setEditName] = useState("")
-
-  const [editUrl, setEditUrl] = useState("")
-
-  const [editCategory, setEditCategory] = useState("")
-
-
-
-
+  // Consolidated from 3 separate useState calls into one object.
+  const [editForm, setEditForm] = useState({ name: "", url: "", category: "" })
 
   const addLink = async () => {
+    if (!siteName || !siteUrl || !category) {
+      toast.warning("Please fill all fields.")
+      return
+    }
 
-    if (!siteName || !siteUrl || !category) return
+    const alreadyExists = links.some(
+      (link) => link.url.toLowerCase() === siteUrl.toLowerCase()
+    )
+
+    if (alreadyExists) {
+      toast.warning("This link already exists.")
+      return
+    }
 
     try {
+      const response = await authFetch("/links/", {
+        method: "POST",
+        body: JSON.stringify({
+          name: siteName,
+          url: siteUrl,
+          category: category,
+          favorite: false,
+        }),
+      })
 
-      const token = localStorage.getItem("access")
-
-      const response = await fetch(
-        "http://127.0.0.1:8000/api/links/",
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-
-          body: JSON.stringify({
-            name: siteName,
-            url: siteUrl,
-            category: category,
-            favorite: false,
-          }),
-        }
-      )
+      const data = await response.json()
 
       if (!response.ok) {
-        console.log("Failed to add link")
+        toast.error(
+          data.url?.[0] ||
+          data.name?.[0] ||
+          data.category?.[0] ||
+          data.detail ||
+          "Failed to add link."
+        )
         return
       }
 
-      const linksResponse = await fetch(
-        "http://127.0.0.1:8000/api/links/",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      )
+      // Use the server's returned object directly instead of
+      // re-fetching the whole list.
+      setLinks((prev) => [...prev, data])
 
-      const updatedLinks = await linksResponse.json()
-
-      setLinks(updatedLinks)
+      toast.success("Link added successfully!")
 
       setSiteName("")
       setSiteUrl("")
       setCategory("")
-
     } catch (error) {
-
-      console.log(error)
-
+      console.error(error)
+      toast.error("Unable to connect to the server.")
     }
-
   }
 
   const handleKeyDown = (e) => {
-
-    if (e.key === "Enter") {
-      addLink()
-    }
-
+    if (e.key === "Enter") addLink()
   }
 
+  const createCategory = async () => {
+    const trimmed = newCategory.trim()
 
-  const deleteLink = async (id) => {
+    if (!trimmed) {
+      toast.warning("Please enter a category name.")
+      return
+    }
+
+    const alreadyExists = categories.some(
+      (cat) => cat.name.toLowerCase() === trimmed.toLowerCase()
+    )
+
+    if (alreadyExists) {
+      toast.warning("Category already exists.")
+      return
+    }
 
     try {
+      const response = await authFetch("/categories/", {
+        method: "POST",
+        body: JSON.stringify({ name: trimmed }),
+      })
 
-      const token = localStorage.getItem("access")
-
-      const response = await fetch(
-        `http://127.0.0.1:8000/api/links/${id}/`,
-        {
-          method: "DELETE",
-
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      )
+      const data = await response.json()
 
       if (!response.ok) {
-        console.log("Failed to delete")
+        toast.error(data.name?.[0] || "Failed to create category.")
         return
       }
 
-      setLinks(
-        links.filter(link => link.id !== id)
-      )
+      setCategories((prev) => [...prev, data])
+      toast.success("Category created successfully!")
 
+      setShowCategoryModal(false)
+      setNewCategory("")
     } catch (error) {
-
-      console.log(error)
-
+      console.error(error)
+      toast.error("Unable to connect to the server.")
     }
-
   }
 
+  const deleteLink = async (id) => {
+    const result = await Swal.fire({
+      title: "Delete Link?",
+      text: "Are you sure you want to delete this link?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#7c3aed",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Delete",
+      cancelButtonText: "Cancel",
+    })
 
-  const toggleFavorite = async (link) => {
+    if (!result.isConfirmed) return
 
     try {
+      const response = await authFetch(`/links/${id}/`, { method: "DELETE" })
 
-      const token = localStorage.getItem("access")
-
-      const patchResponse = await fetch(
-        `http://127.0.0.1:8000/api/links/${link.id}/`,
-        {
-          method: "PATCH",
-
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-
-          body: JSON.stringify({
-            favorite: !link.favorite,
-          }),
-        }
-      )
-
-      if (!patchResponse.ok) {
-        console.log("Failed to update favorite")
+      if (!response.ok) {
+        toast.error("Failed to delete link.")
         return
       }
 
-      const response = await fetch(
-        "http://127.0.0.1:8000/api/links/",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+      setLinks((prev) => prev.filter((link) => link.id !== id))
+      toast.success("Link deleted successfully!")
+    } catch (error) {
+      console.error(error)
+      toast.error("Unable to connect to the server.")
+    }
+  }
+
+  const toggleFavorite = async (link) => {
+    try {
+      const response = await authFetch(`/links/${link.id}/`, {
+        method: "PATCH",
+        body: JSON.stringify({ favorite: !link.favorite }),
+      })
+
+      if (!response.ok) {
+        toast.error("Failed to update favorite.")
+        return
+      }
+
+      const updated = await response.json()
+
+      setLinks((prev) =>
+        prev.map((l) => (l.id === updated.id ? updated : l))
       )
 
-      const updatedLinks = await response.json()
-
-      setLinks(updatedLinks)
-
+      toast.success(
+        link.favorite ? "Removed from favorites." : "Added to favorites."
+      )
     } catch (error) {
-
-      console.log(error)
-
+      console.error(error)
+      toast.error("Unable to connect to the server.")
     }
-
   }
 
   const startEdit = (link) => {
-
     setEditingId(link.id)
-
-    setEditName(link.name)
-
-    setEditUrl(link.url)
-
-    setEditCategory(link.category.id)
-
+    setEditForm({
+      name: link.name,
+      url: link.url,
+      category: link.category.id,
+    })
   }
 
   const saveEdit = async () => {
-
     try {
+      const response = await authFetch(`/links/${editingId}/`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          name: editForm.name,
+          url: editForm.url,
+          category: editForm.category,
+        }),
+      })
 
-      const token = localStorage.getItem("access")
-
-      const patchResponse = await fetch(
-        `http://127.0.0.1:8000/api/links/${editingId}/`,
-        {
-          method: "PATCH",
-
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-
-          body: JSON.stringify({
-            name: editName,
-            url: editUrl,
-            category: editCategory,
-          }),
-        }
-      )
-
-      if (!patchResponse.ok) {
-        console.log("Failed to save changes")
+      if (!response.ok) {
+        toast.error("Failed to save changes.")
         return
       }
 
-      const response = await fetch(
-        "http://127.0.0.1:8000/api/links/",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+      const updated = await response.json()
+
+      setLinks((prev) =>
+        prev.map((l) => (l.id === updated.id ? updated : l))
       )
 
-      const updatedLinks = await response.json()
-
-      setLinks(updatedLinks)
-
       setEditingId(null)
-
+      toast.success("Link updated successfully!")
     } catch (error) {
-
-      console.log(error)
-
+      console.error(error)
+      toast.error("Unable to connect to the server.")
     }
-
   }
 
   const handleDragEnd = async (event) => {
-
     const { active, over } = event
 
     if (!over || active.id === over.id) return
 
-    const oldIndex = links.findIndex(
-      (link) => link.id === active.id
-    )
+    const oldIndex = links.findIndex((link) => link.id === active.id)
+    const newIndex = links.findIndex((link) => link.id === over.id)
 
-    const newIndex = links.findIndex(
-      (link) => link.id === over.id
-    )
-
-    const reorderedLinks = arrayMove(
-      links,
-      oldIndex,
-      newIndex
-    )
-
+    const reorderedLinks = arrayMove(links, oldIndex, newIndex)
     setLinks(reorderedLinks)
 
     try {
-
-      const token = localStorage.getItem("access")
-
       const orderData = reorderedLinks.map((link, index) => ({
         id: link.id,
         order: index,
       }))
 
-      await fetch(
-        "http://127.0.0.1:8000/api/links/reorder/",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            links: orderData,
-          }),
-        }
-      )
-
+      await authFetch("/links/reorder/", {
+        method: "POST",
+        body: JSON.stringify({ links: orderData }),
+      })
     } catch (error) {
-
-      console.log(error)
-
+      console.error(error)
+      toast.error("Failed to save link order.")
     }
-
   }
 
   const filteredLinks = Array.isArray(links)
     ? links.filter((link) => {
+      const matchesMenu =
+        selectedMenu === "Favorites"
+          ? link.favorite
+          : selectedMenu === "Dashboard"
+            ? true
+            : link.category.name === selectedMenu
 
-      const matchesMenu = (() => {
-
-        if (selectedMenu === "Favorites") {
-          return link.favorite
-        }
-
-        if (selectedMenu === "Dashboard") {
-          return true
-        }
-
-        return link.category.name === selectedMenu
-
-      })()
-
-      const matchesSearch =
-        link.name
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase())
+      const matchesSearch = link.name
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase())
 
       return matchesMenu && matchesSearch
-
     })
     : []
 
-
-
-
-  const getLogo = (url) => {
-
-    try {
-
-      const domain = new URL(url).hostname
-
-      return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`
-
-    } catch {
-
-      return "https://cdn-icons-png.flaticon.com/512/25/25231.png"
-
-    }
-
-  }
-
+  const CategoryOptions = () => (
+    <>
+      {categories.map((cat) => (
+        <option key={cat.id} value={cat.id}>
+          {cat.name}
+        </option>
+      ))}
+    </>
+  )
 
   return (
     <div className="bg-zinc-900/70 backdrop-blur-xl rounded-3xl p-6 border border-white/10 mt-8">
-
-      <h2 className="text-white text-3xl font-bold mb-8">
-        Quick Links
-      </h2>
-
+      <h2 className="text-white text-3xl font-bold mb-8">Quick Links</h2>
 
       {selectedMenu === "Dashboard" && (
-
         <div className="grid lg:grid-cols-4 md:grid-cols-2 grid-cols-1 gap-4 mb-8">
-
           <input
             type="text"
             placeholder="Website Name"
@@ -370,7 +326,6 @@ function QuickLinks({
             className="bg-zinc-950/80 text-white px-4 py-3 rounded-2xl outline-none border border-zinc-800"
             onKeyDown={handleKeyDown}
           />
-
 
           <input
             type="text"
@@ -381,28 +336,23 @@ function QuickLinks({
             onKeyDown={handleKeyDown}
           />
 
+          <div className="flex gap-2">
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="flex-1 bg-zinc-950/80 text-white px-4 py-3 rounded-2xl outline-none border border-zinc-800"
+            >
+              <option value="">Select Category</option>
+              <CategoryOptions />
+            </select>
 
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="bg-zinc-950/80 text-white px-4 py-3 rounded-2xl outline-none border border-zinc-800"
-          >
-
-            <option value="">Select Category</option>
-
-            {categories.map((category) => (
-
-              <option
-                key={category.id}
-                value={category.id}
-              >
-                {category.name}
-              </option>
-
-            ))}
-
-          </select>
-
+            <button
+              onClick={() => setShowCategoryModal(true)}
+              className="px-4 rounded-2xl bg-violet-600 hover:bg-violet-700 transition text-white font-bold"
+            >
+              +
+            </button>
+          </div>
 
           <button
             onClick={addLink}
@@ -410,47 +360,23 @@ function QuickLinks({
           >
             Add Link
           </button>
-
         </div>
-
       )}
 
-
       {filteredLinks.length === 0 ? (
-
         <div className="bg-zinc-950/60 border border-dashed border-zinc-700 rounded-3xl p-16 text-center">
-
-          <h3 className="text-2xl font-bold text-white mb-3">
-            Nothing Here
-          </h3>
-
-          <p className="text-zinc-400">
-            No links available in this section.
-          </p>
-
+          <h3 className="text-2xl font-bold text-white mb-3">Nothing Here</h3>
+          <p className="text-zinc-400">No links available in this section.</p>
         </div>
-
       ) : (
-
-        <DndContext
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-
+        <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext
             items={filteredLinks.map((link) => link.id)}
             strategy={verticalListSortingStrategy}
           >
-
             <div className="grid lg:grid-cols-2 grid-cols-1 gap-6">
-
               {filteredLinks.map((link) => (
-
-                <SortableLinkCard
-                  key={link.id}
-                  id={link.id}
-                >
-
+                <SortableLinkCard key={link.id} id={link.id}>
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -458,62 +384,48 @@ function QuickLinks({
                     transition={{ duration: 0.2 }}
                     className="bg-zinc-950/90 border border-white/10 rounded-3xl p-6"
                   >
-
                     <div className="flex items-start justify-between">
-
                       <div className="flex gap-5">
-
                         <div className="w-20 h-20 bg-white rounded-2xl p-3 flex items-center justify-center">
-
                           <img
                             src={getLogo(link.url)}
                             alt="logo"
                             className="w-full h-full object-contain"
                           />
-
                         </div>
 
                         <div>
-
                           {editingId === link.id ? (
-
                             <div className="space-y-3">
-
                               <input
                                 type="text"
-                                value={editName}
-                                onChange={(e) => setEditName(e.target.value)}
+                                value={editForm.name}
+                                onChange={(e) =>
+                                  setEditForm((f) => ({ ...f, name: e.target.value }))
+                                }
                                 className="bg-zinc-900 text-white px-3 py-2 rounded-xl w-full"
                               />
 
                               <input
                                 type="text"
-                                value={editUrl}
-                                onChange={(e) => setEditUrl(e.target.value)}
+                                value={editForm.url}
+                                onChange={(e) =>
+                                  setEditForm((f) => ({ ...f, url: e.target.value }))
+                                }
                                 className="bg-zinc-900 text-white px-3 py-2 rounded-xl w-full"
                               />
 
                               <select
-                                value={editCategory}
-                                onChange={(e) => setEditCategory(e.target.value)}
+                                value={editForm.category}
+                                onChange={(e) =>
+                                  setEditForm((f) => ({ ...f, category: e.target.value }))
+                                }
                                 className="bg-zinc-900 text-white px-3 py-2 rounded-xl w-full"
                               >
-
-                                {categories.map((category) => (
-
-                                  <option
-                                    key={category.id}
-                                    value={category.id}
-                                  >
-                                    {category.name}
-                                  </option>
-
-                                ))}
-
+                                <CategoryOptions />
                               </select>
 
                               <div className="flex gap-3">
-
                                 <button
                                   onClick={saveEdit}
                                   className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl"
@@ -527,15 +439,10 @@ function QuickLinks({
                                 >
                                   Cancel
                                 </button>
-
                               </div>
-
                             </div>
-
                           ) : (
-
                             <>
-
                               <h3 className="text-white text-3xl font-bold mb-2">
                                 {link.name}
                               </h3>
@@ -550,22 +457,15 @@ function QuickLinks({
                               >
                                 Open Link
                               </button>
-
                             </>
-
                           )}
-
                         </div>
-
                       </div>
 
                       <div className="flex gap-4">
-
                         <button
                           onClick={() => toggleFavorite(link)}
-                          className={`text-3xl ${link.favorite
-                              ? "text-yellow-400"
-                              : "text-zinc-600"
+                          className={`text-3xl ${link.favorite ? "text-yellow-400" : "text-zinc-600"
                             }`}
                         >
                           ★
@@ -584,29 +484,52 @@ function QuickLinks({
                         >
                           Delete
                         </button>
-
                       </div>
-
                     </div>
-
                   </motion.div>
-
                 </SortableLinkCard>
-
               ))}
-
             </div>
-
           </SortableContext>
-
         </DndContext>
-
       )}
 
+      {showCategoryModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-zinc-900 p-6 rounded-2xl w-96">
+            <h2 className="text-xl font-bold text-white mb-4">Add Category</h2>
+
+            <input
+              type="text"
+              placeholder="Category Name"
+              value={newCategory}
+              onChange={(e) => setNewCategory(e.target.value)}
+              className="w-full p-3 rounded-xl bg-zinc-800 text-white outline-none"
+            />
+
+            <div className="flex justify-end gap-3 mt-5">
+              <button
+                onClick={() => {
+                  setShowCategoryModal(false)
+                  setNewCategory("")
+                }}
+                className="px-4 py-2 rounded-xl bg-zinc-700 text-white"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={createCategory}
+                className="px-4 py-2 rounded-xl bg-violet-600 text-white"
+              >
+                Create
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
-
   )
-
 }
 
 export default QuickLinks

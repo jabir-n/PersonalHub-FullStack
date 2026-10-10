@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
+import { toast } from "react-toastify";
 
 
 function ProfileModal({
@@ -52,9 +53,9 @@ function ProfileModal({
 
       if (!response.ok) {
 
-        alert("Failed to update profile")
+        toast.error("Failed to update profile.");
 
-        return
+        return;
 
       }
 
@@ -62,11 +63,15 @@ function ProfileModal({
 
       setProfile(data)
 
+      toast.success("Profile updated successfully!");
+
       onClose()
 
     } catch (error) {
 
-      console.log(error)
+      console.error(error);
+
+      toast.error("Unable to connect to the server.");
 
     }
 

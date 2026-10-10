@@ -1,4 +1,4 @@
-from rest_framework import generics
+from rest_framework import generics, permissions
 from .models import Category, QuickLink, UserProfile
 from .serializers import (
     CategorySerializer,
@@ -12,13 +12,31 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser
+from django.db.models import Q
+
+from django.core.mail import send_mail
+from django.conf import settings
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
+from django.contrib.auth.models import User
+from .tokens import email_verification_token
+from django.utils.http import urlsafe_base64_decode
+from django.shortcuts import get_object_or_404
 
 
+class CategoryListAPIView(generics.ListCreateAPIView):
 
-class CategoryListAPIView(generics.ListAPIView):
-
-    queryset = Category.objects.all()
     serializer_class = CategorySerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        return Category.objects.filter(
+          Q(user__isnull=True) |
+          Q(user=self.request.user)
+    )
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 
 class QuickLinkListAPIView(generics.ListCreateAPIView):
@@ -61,8 +79,38 @@ class QuickLinkDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     
 
 class RegisterAPIView(generics.CreateAPIView):
-
     serializer_class = RegisterSerializer
+
+    def create(self, request, *args, **kwargs):
+
+        print("🔥 REGISTER API CALLED")
+        response = super().create(request, *args, **kwargs)
+
+        user = User.objects.get(username=request.data["username"])
+
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = email_verification_token.make_token(user)
+
+        verification_link = (
+            f"http://localhost:5173/verify-email/{uid}/{token}/"
+        )
+
+        send_mail(
+            subject="Verify your PersonalHub account",
+            message=(
+                f"Welcome to PersonalHub!\n\n"
+                f"Click the link below to verify your email:\n\n"
+                f"{verification_link}\n\n"
+                f"If you did not create this account, ignore this email."
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+        )
+        print("\n🔥 VERIFICATION LINK:")
+        print(verification_link)
+        print()
+
+        return response
 
 class UpdateLinkOrderAPIView(APIView):
 
@@ -113,3 +161,75 @@ class UserProfileAPIView(generics.RetrieveUpdateAPIView):
         )
 
         return profile
+
+class CategoryDetailAPIView(
+    generics.DestroyAPIView
+):
+    serializer_class = CategorySerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Category.objects.filter(
+            user=self.request.user
+        )
+
+class VerifyEmailAPIView(APIView):
+
+    permission_classes = []
+
+    def get(self, request, uid, token):
+
+        # Step 1: Decode the user ID
+        try:
+            uid = urlsafe_base64_decode(uid).decode()
+            user = User.objects.get(pk=uid)
+
+        except (
+            TypeError,
+            ValueError,
+            OverflowError,
+            User.DoesNotExist,
+        ):
+            return Response(
+                {"detail": "Invalid verification link."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Step 2: Check whether the account is already verified
+        if user.is_active:
+            return Response(
+                {
+                    "status": "already_verified",
+                    "detail": (
+                        "Your email is already verified. "
+                        "Please log in."
+                    )
+                },
+                status=status.HTTP_200_OK
+            )
+
+        # Step 3: Validate the token for an inactive account
+        if email_verification_token.check_token(user, token):
+
+            user.is_active = True
+            user.save()
+
+            return Response(
+                {
+                    "status": "success",
+                    "detail": (
+                        "Email verified successfully. "
+                        "You can now log in."
+                    )
+                },
+                status=status.HTTP_200_OK
+            )
+
+        # Step 4: Reject an invalid or expired token
+        return Response(
+            {
+                "status": "invalid",
+                "detail": "Invalid or expired verification link."
+            },
+            status=status.HTTP_400_BAD_REQUEST
+        )

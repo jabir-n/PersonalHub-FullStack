@@ -7,7 +7,11 @@ backend/db.sqlite3
 # Django media
 backend/media/
 
+
 # Environment files
+.env
+.env.*
+!.env.example
 backend/.env
 frontend/.env
 

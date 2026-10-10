@@ -24,6 +24,8 @@ from hub.views import (
     RegisterAPIView,
     UpdateLinkOrderAPIView,
     UserProfileAPIView,
+    CategoryDetailAPIView,
+    VerifyEmailAPIView,
 )
 
 from rest_framework_simplejwt.views import (
@@ -77,6 +79,15 @@ urlpatterns = [
     path(
         "api/profile/",
         UserProfileAPIView.as_view(),
+    ),
+
+    path(
+        "api/categories/<int:pk>/",
+        CategoryDetailAPIView.as_view(),
+    ),
+    path(
+        "api/verify-email/<uid>/<token>/",
+         VerifyEmailAPIView.as_view(),
     ),
 
 ]
