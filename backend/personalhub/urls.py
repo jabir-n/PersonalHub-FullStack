@@ -26,6 +26,9 @@ from hub.views import (
     UserProfileAPIView,
     CategoryDetailAPIView,
     VerifyEmailAPIView,
+    ForgotPasswordAPIView,
+    ResetPasswordAPIView,
+
 )
 
 from rest_framework_simplejwt.views import (
@@ -89,6 +92,14 @@ urlpatterns = [
         "api/verify-email/<uid>/<token>/",
          VerifyEmailAPIView.as_view(),
     ),
+    path(
+        "api/forgot-password/",
+        ForgotPasswordAPIView.as_view(),
+    ),
+    path(
+        "api/reset-password/<str:uid>/<str:token>/",
+        ResetPasswordAPIView.as_view(),
+    ), 
 
 ]
 

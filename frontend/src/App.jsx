@@ -1,103 +1,124 @@
-import { useState, useEffect, useRef } from "react"
-import Login from "./components/Login"
-import Sidebar from "./components/Sidebar"
-import Navbar from "./components/Navbar"
-import Dashboard from "./components/Dashboard"
+import { useState, useEffect, useRef } from "react";
+
+import Login from "./components/Login";
+import Sidebar from "./components/Sidebar";
+import Navbar from "./components/Navbar";
+import Dashboard from "./components/Dashboard";
+import ForgotPassword from "./components/ForgotPassword";
+import ResetPassword from "./components/ResetPassword";
 
 function App() {
+  const [selectedMenu, setSelectedMenu] = useState("Dashboard");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [links, setLinks] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [profile, setProfile] = useState(null);
 
-  const [selectedMenu, setSelectedMenu] = useState("Dashboard")
-  const [searchTerm, setSearchTerm] = useState("")
-  const [links, setLinks] = useState([])
-  const [categories, setCategories] = useState([])
-  const [profile, setProfile] = useState(null)
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [verificationStatus, setVerificationStatus] = useState("checking")
-  const verificationStarted = useRef(false)
-  
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // Email verification
+  const [verificationStatus, setVerificationStatus] = useState("checking");
+  const verificationStarted = useRef(false);
+
+  // Forgot password
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+
+  // Reset password
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [resetPasswordData, setResetPasswordData] = useState({
+    uid: "",
+    token: "",
+  });
+
+  // Check whether the user is already logged in
   useEffect(() => {
+    const accessToken = localStorage.getItem("access");
 
-    const token = localStorage.getItem("access")
-
-    if (token) {
-      setIsLoggedIn(true)
+    if (accessToken) {
+      setIsLoggedIn(true);
     }
+  }, []);
 
-  }, [])
-
+  // Handle email verification links
   useEffect(() => {
-
-    const path = window.location.pathname
+    const path = window.location.pathname;
 
     if (!path.startsWith("/verify-email/")) {
-      return
+      return;
     }
 
     if (verificationStarted.current) {
-      return
+      return;
     }
 
-    verificationStarted.current = true
+    verificationStarted.current = true;
 
-    const parts = path.split("/")
+    const parts = path.split("/");
 
-
-
-
-
-    const uid = parts[2]
-    const token = parts[3]
+    const uid = parts[2];
+    const token = parts[3];
 
     if (!uid || !token) {
-      setVerificationStatus("invalid")
-      return
+      setVerificationStatus("invalid");
+      return;
     }
 
     async function verifyEmail() {
-
       try {
-
         const response = await fetch(
           `http://127.0.0.1:8000/api/verify-email/${uid}/${token}/`
-        )
+        );
 
-        const data = await response.json()
+        const data = await response.json();
 
         if (response.ok) {
           if (data.status === "already_verified") {
-            setVerificationStatus("already_verified")
+            setVerificationStatus("already_verified");
           } else {
-            setVerificationStatus("success")
+            setVerificationStatus("success");
           }
         } else {
-          console.log(data)
-          setVerificationStatus("invalid")
+          console.log("Email verification failed:", data);
+          setVerificationStatus("invalid");
         }
-
-
-
       } catch (error) {
-
-        console.log(error)
-        setVerificationStatus("error")
-
+        console.error("Email verification error:", error);
+        setVerificationStatus("error");
       }
-
     }
 
-    verifyEmail()
+    verifyEmail();
+  }, []);
 
-  }, [])
-
+  // Detect reset-password links
+  // Detect reset-password links
   useEffect(() => {
+    const pathname = window.location.pathname;
+    const parts = pathname.split("/").filter(Boolean);
 
-    if (!isLoggedIn) return
+    if (
+      parts[0] === "reset-password" &&
+      parts[1] &&
+      parts[2]
+    ) {
+      setResetPasswordData({
+        uid: parts[1],
+        token: parts[2],
+      });
+
+      setShowResetPassword(true);
+    }
+  }, []);
+
+  // Load links, categories, and profile after login
+  useEffect(() => {
+    if (!isLoggedIn) {
+      return;
+    }
 
     async function fetchLinks() {
-
       try {
-
-        const token = localStorage.getItem("access")
+        const token = localStorage.getItem("access");
 
         const response = await fetch(
           "http://127.0.0.1:8000/api/links/",
@@ -106,29 +127,22 @@ function App() {
               Authorization: `Bearer ${token}`,
             },
           }
-        )
+        );
 
         if (!response.ok) {
-          console.log("Failed to load links")
-          return
+          console.log("Failed to load links");
+          return;
         }
 
-        const data = await response.json()
-
-        setLinks(data)
-
+        const data = await response.json();
+        setLinks(data);
       } catch (error) {
-
-        console.log(error)
-
+        console.error("Error loading links:", error);
       }
-
     }
 
     async function fetchCategories() {
-
       try {
-
         const token = localStorage.getItem("access");
 
         const response = await fetch(
@@ -146,24 +160,15 @@ function App() {
         }
 
         const data = await response.json();
-
-        console.log("Categories:", data);
-
         setCategories(data);
-
       } catch (error) {
-
-        console.log(error);
-
+        console.error("Error loading categories:", error);
       }
-
     }
 
     async function fetchProfile() {
-
       try {
-
-        const token = localStorage.getItem("access")
+        const token = localStorage.getItem("access");
 
         const response = await fetch(
           "http://127.0.0.1:8000/api/profile/",
@@ -172,33 +177,27 @@ function App() {
               Authorization: `Bearer ${token}`,
             },
           }
-        )
+        );
 
         if (!response.ok) {
-          console.log("Failed to load profile")
-          return
+          console.log("Failed to load profile");
+          return;
         }
 
-        const data = await response.json()
-
-        setProfile(data)
-
+        const data = await response.json();
+        setProfile(data);
       } catch (error) {
-
-        console.log(error)
-
+        console.error("Error loading profile:", error);
       }
-
     }
 
-    fetchLinks()
-    fetchCategories()
-    fetchProfile()
+    fetchLinks();
+    fetchCategories();
+    fetchProfile();
+  }, [isLoggedIn]);
 
-  }, [isLoggedIn])
-
+  // Email verification screens
   if (window.location.pathname.startsWith("/verify-email/")) {
-
     if (verificationStatus === "checking") {
       return (
         <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-purple-950 to-black flex items-center justify-center">
@@ -212,7 +211,7 @@ function App() {
             </p>
           </div>
         </div>
-      )
+      );
     }
 
     if (verificationStatus === "success") {
@@ -229,15 +228,15 @@ function App() {
 
             <button
               onClick={() => {
-                window.location.href = "/"
+                window.location.href = "/";
               }}
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 font-bold"
+              className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 font-bold text-white"
             >
               Go to Login
             </button>
           </div>
         </div>
-      )
+      );
     }
 
     if (verificationStatus === "already_verified") {
@@ -255,15 +254,15 @@ function App() {
 
             <button
               onClick={() => {
-                window.location.href = "/"
+                window.location.href = "/";
               }}
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 font-bold"
+              className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 font-bold text-white"
             >
               Go to Login
             </button>
           </div>
         </div>
-      )
+      );
     }
 
     return (
@@ -274,37 +273,70 @@ function App() {
           </h1>
 
           <p className="text-zinc-400 mb-6">
-            This verification link is invalid or has expired.
+            {verificationStatus === "error"
+              ? "Unable to connect to the server. Please try again."
+              : "This verification link is invalid or has expired."}
           </p>
 
           <button
             onClick={() => {
-              window.location.href = "/"
+              window.location.href = "/";
             }}
-            className="px-6 py-3 rounded-xl bg-purple-600 font-bold"
+            className="px-6 py-3 rounded-xl bg-purple-600 font-bold text-white"
           >
             Back to Login
           </button>
         </div>
       </div>
-    )
+    );
   }
 
+  // Reset-password screen
+  if (showResetPassword) {
+    return (
+      <ResetPassword
+        uid={resetPasswordData.uid}
+        token={resetPasswordData.token}
+        onBackToLogin={() => {
+          window.history.replaceState({}, "", "/");
+
+          setShowResetPassword(false);
+          setResetPasswordData({
+            uid: "",
+            token: "",
+          });
+
+          setShowForgotPassword(false);
+        }}
+      />
+    );
+  }
+
+  // Login and forgot-password screens
   if (!isLoggedIn) {
+    if (showForgotPassword) {
+      return (
+        <ForgotPassword
+          onBackToLogin={() => {
+            setShowForgotPassword(false);
+          }}
+        />
+      );
+    }
 
     return (
       <Login
         setIsLoggedIn={setIsLoggedIn}
+        onForgotPassword={() => {
+          setShowForgotPassword(true);
+        }}
       />
-    )
-
+    );
   }
 
-
+  // Main dashboard
   return (
-
     <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-black to-zinc-900 flex">
-
       <Sidebar
         selectedMenu={selectedMenu}
         setSelectedMenu={setSelectedMenu}
@@ -314,7 +346,6 @@ function App() {
       />
 
       <div className="flex-1">
-
         <Navbar
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
@@ -331,13 +362,9 @@ function App() {
           categories={categories}
           setCategories={setCategories}
         />
-
       </div>
-
     </div>
-
-  )
-
+  );
 }
 
-export default App
+export default App;

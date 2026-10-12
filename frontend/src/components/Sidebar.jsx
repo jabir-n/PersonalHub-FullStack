@@ -73,7 +73,7 @@ function Sidebar({
 
     }
 
-    // we'll refresh categories in the next step  
+    
 
 };
 
