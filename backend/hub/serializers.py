@@ -1,9 +1,14 @@
 from rest_framework import serializers
-from .models import Category, QuickLink, UserProfile
 from django.contrib.auth.models import User
 from django.db.models import Q
+from django.contrib.auth.password_validation import validate_password
 
-from rest_framework import serializers
+from .models import Category, QuickLink, UserProfile
+
+
+# =========================
+# CATEGORY SERIALIZER
+# =========================
 
 class CategorySerializer(serializers.ModelSerializer):
 
@@ -14,45 +19,102 @@ class CategorySerializer(serializers.ModelSerializer):
 
     def validate_name(self, value):
 
-        if Category.objects.filter(
-            Q(user__isnull=True) | Q(user=self.context["request"].user),
+        request = self.context.get("request")
+
+        if request and Category.objects.filter(
+            Q(user__isnull=True) | Q(user=request.user),
             name__iexact=value,
         ).exists():
             raise serializers.ValidationError(
                 "Category already exists."
             )
 
-        return value   
+        return value
+
+
+# =========================
+# QUICK LINK SERIALIZER
+# =========================
 
 class QuickLinkSerializer(serializers.ModelSerializer):
+
     category = CategorySerializer(read_only=True)
 
     class Meta:
         model = QuickLink
         fields = "__all__"
 
+
+# =========================
+# QUICK LINK CREATE / UPDATE
+# =========================
+
 class QuickLinkCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = QuickLink
-        fields = "__all__"
+        fields = [
+            "id",
+            "name",
+            "url",
+            "category",
+            "favorite",
+            "order",
+            "created_at",
+        ]
 
+        read_only_fields = [
+            "id",
+            "created_at",
+        ]
+
+    def validate_category(self, value):
+
+        request = self.context.get("request")
+
+        if request is None or not request.user.is_authenticated:
+            raise serializers.ValidationError(
+                "Authentication is required."
+            )
+
+        # Allow built-in categories and the current user's categories.
+        # Reject categories belonging to other users.
+        if value.user is not None and value.user != request.user:
+            raise serializers.ValidationError(
+                "You cannot use another user's category."
+            )
+
+        return value
+
+
+# =========================
+# USER REGISTRATION
+# =========================
 
 class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["username", "email", "password"]
+        fields = [
+            "username",
+            "email",
+            "password",
+        ]
 
         extra_kwargs = {
             "password": {
                 "write_only": True,
-                "min_length": 6,
             },
             "email": {
                 "required": True,
             },
         }
+
+    def validate_password(self, value):
+
+        validate_password(value)
+
+        return value
 
     def validate_username(self, value):
 
@@ -84,12 +146,17 @@ class RegisterSerializer(serializers.ModelSerializer):
         user.save()
 
         return user
-    
+
+
+# =========================
+# USER PROFILE SERIALIZER
+# =========================
+
 class UserProfileSerializer(serializers.ModelSerializer):
 
     username = serializers.CharField(
         source="user.username",
-        read_only=True
+        read_only=True,
     )
 
     class Meta:
@@ -100,3 +167,4 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "display_name",
             "profile_image",
         ]
+        

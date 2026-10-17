@@ -41,7 +41,7 @@ function StatsCards({ links }) {
 
   return (
 
-    <div className="grid lg:grid-cols-3 md:grid-cols-2 grid-cols-1 gap-5 mb-8">
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-5 mb-6 sm:mb-8">
 
       {stats.map((stat, index) => (
 
@@ -64,7 +64,7 @@ function StatsCards({ links }) {
             scale: 1.03,
           }}
           className={`bg-gradient-to-br ${stat.color}
-          border border-white/10 rounded-3xl p-6
+          border border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6
           backdrop-blur-xl
           transition-all duration-300
           hover:shadow-2xl hover:shadow-purple-500/20`}
@@ -78,7 +78,7 @@ function StatsCards({ links }) {
                 {stat.title}
               </h3>
 
-              <p className="text-5xl font-bold text-white">
+              <p className="text-3xl sm:text-4xl md:text-5xl font-bold text-white">
                 {stat.value}
               </p>
 
@@ -89,7 +89,7 @@ function StatsCards({ links }) {
                 rotate: 15,
                 scale: 1.1,
               }}
-              className="w-20 h-20 rounded-3xl bg-white/10 flex items-center justify-center text-4xl text-white"
+              className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-2xl sm:rounded-3xl bg-white/10 flex items-center justify-center text-2xl sm:text-3xl md:text-4xl text-white"
             >
               {stat.icon}
             </motion.div>

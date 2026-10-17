@@ -1,10 +1,84 @@
 @import "tailwindcss";
 
-
 * {
+  box-sizing: border-box;
   transition: all 0.05s ease;
 }
 
 html {
   scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: clip;
+}
+
+button, input, select, textarea {
+  max-width: 100%;
+}
+
+img, svg {
+  max-width: 100%;
+}
+
+@media (max-width: 767px) {
+  .app-shell {
+    width: 100%;
+    overflow-x: clip;
+  }
+
+  .app-sidebar {
+    position: relative;
+    width: 100%;
+    min-height: auto;
+    padding: 0.8rem 1rem 0.4rem;
+    border-right: 0;
+  }
+
+  .app-sidebar-menu {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .app-sidebar-item {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .app-upgrade-card {
+    display: none;
+  }
+
+  .app-main {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .app-navbar {
+    position: relative;
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

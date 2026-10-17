@@ -29,11 +29,11 @@ function Navbar({
   return (
 
     <>
-      <div className="h-24 backdrop-blur-xl bg-white/5 border-b border-white/10 flex items-center justify-between px-8 sticky top-0 z-40">
+      <div className="app-navbar min-h-24 backdrop-blur-xl bg-zinc-950/90 md:bg-white/5 border-b border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 px-4 sm:px-6 md:px-8 py-4 sticky top-0 z-40">
 
         <div>
 
-          <h2 className="text-white text-3xl font-bold">
+          <h2 className="text-white text-2xl sm:text-3xl font-bold">
             Personal Hub
           </h2>
 
@@ -43,16 +43,16 @@ function Navbar({
 
         </div>
 
-        <div className="flex items-center gap-6">
+        <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 md:gap-6 min-w-0">
 
-          <div className="relative">
+          <div className="relative flex-1 sm:flex-none min-w-0">
 
             <input
               type="text"
               placeholder="Search links..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-zinc-900/80 text-white px-6 py-4 pr-14 rounded-3xl outline-none w-80 border border-zinc-800"
+              className="bg-zinc-900/80 text-white px-4 py-3 pr-11 rounded-2xl outline-none w-full sm:w-56 md:w-80 border border-zinc-800"
             />
 
             <FaSearch className="absolute right-5 top-1/2 -translate-y-1/2 text-zinc-500" />
@@ -63,7 +63,7 @@ function Navbar({
 
             <button
               onClick={() => setShowMenu(!showMenu)}
-              className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-full px-3 py-2 hover:bg-white/10 transition"
+              className="flex items-center gap-2 sm:gap-3 bg-white/5 border border-white/10 rounded-full px-2 sm:px-3 py-2 hover:bg-white/10 transition max-w-full"
             >
 
               {profile?.profile_image ? (
@@ -71,12 +71,12 @@ function Navbar({
                 <img
                   src={profile.profile_image}
                   alt="profile"
-                  className="w-12 h-12 rounded-full object-cover"
+                  className="w-9 h-9 sm:w-12 sm:h-12 rounded-full object-cover"
                 />
 
               ) : (
 
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold text-lg">
+                <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold text-lg">
 
                   {profile?.display_name?.charAt(0).toUpperCase() || "U"}
 
@@ -86,7 +86,7 @@ function Navbar({
 
               <div className="text-left">
 
-                <p className="text-white font-semibold">
+                <p className="text-white font-semibold max-w-28 sm:max-w-none truncate">
                   {profile?.display_name || "User"}
                 </p>
 

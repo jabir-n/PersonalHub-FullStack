@@ -3,6 +3,8 @@ import { motion } from "framer-motion";
 import FloatingIcons from "./FloatingIcons";
 import { toast } from "react-toastify";
 
+const API_BASE = "http://127.0.0.1:8000/api";
+
 function Login({ setIsLoggedIn, onForgotPassword }) {
     const [isRegister, setIsRegister] = useState(false);
     const [confirmPassword, setConfirmPassword] = useState("");
@@ -10,6 +12,10 @@ function Login({ setIsLoggedIn, onForgotPassword }) {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
+
+    // =========================
+    // LOGIN
+    // =========================
 
     const handleLogin = async () => {
         if (!username.trim() || !password) {
@@ -20,46 +26,49 @@ function Login({ setIsLoggedIn, onForgotPassword }) {
         setLoading(true);
 
         try {
-            const response = await fetch(
-                "http://127.0.0.1:8000/api/login/",
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        username: username.trim(),
-                        password,
-                    }),
-                }
-            );
+            const response = await fetch(`${API_BASE}/login/`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    username: username.trim(),
+                    password,
+                }),
+            });
 
             const data = await response.json();
 
-            if (response.ok) {
-                localStorage.removeItem("access");
-                localStorage.removeItem("refresh");
-
+            if (
+                response.ok &&
+                data.access &&
+                data.refresh
+            ) {
+                // Store tokens only after successful authentication.
                 localStorage.setItem("access", data.access);
                 localStorage.setItem("refresh", data.refresh);
 
                 toast.success("Login successful!");
 
-                setTimeout(() => {
-                    setIsLoggedIn(true);
-                }, 1000);
+                // Tell App.jsx to display the dashboard.
+                setIsLoggedIn(true);
             } else {
                 toast.error(
-                    data.detail || "Invalid username or password."
+                    data.detail ||
+                    "Invalid username or password."
                 );
             }
         } catch (error) {
-            console.error(error);
+            console.error("Login error:", error);
             toast.error("Unable to connect to the server.");
         } finally {
             setLoading(false);
         }
     };
+
+    // =========================
+    // REGISTER
+    // =========================
 
     const handleRegister = async () => {
         if (
@@ -72,11 +81,6 @@ function Login({ setIsLoggedIn, onForgotPassword }) {
             return;
         }
 
-        if (password.length < 6) {
-            toast.warning("Password must be at least 6 characters.");
-            return;
-        }
-
         if (password !== confirmPassword) {
             toast.warning("Passwords do not match.");
             return;
@@ -85,20 +89,17 @@ function Login({ setIsLoggedIn, onForgotPassword }) {
         setLoading(true);
 
         try {
-            const response = await fetch(
-                "http://127.0.0.1:8000/api/register/",
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        username: username.trim(),
-                        email: email.trim(),
-                        password,
-                    }),
-                }
-            );
+            const response = await fetch(`${API_BASE}/register/`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    username: username.trim(),
+                    email: email.trim(),
+                    password,
+                }),
+            });
 
             const data = await response.json();
 
@@ -107,6 +108,7 @@ function Login({ setIsLoggedIn, onForgotPassword }) {
                     "Account created! Check your email to verify your account."
                 );
 
+                // Return to login after successful registration.
                 setIsRegister(false);
                 setUsername("");
                 setEmail("");
@@ -126,15 +128,38 @@ function Login({ setIsLoggedIn, onForgotPassword }) {
                 }
             }
         } catch (error) {
-            console.error(error);
+            console.error("Registration error:", error);
             toast.error("Unable to connect to the server.");
         } finally {
             setLoading(false);
         }
     };
 
+    // =========================
+    // FORM SUBMISSION
+    // =========================
+
+    const handleSubmit = (event) => {
+        event.preventDefault();
+
+        if (loading) {
+            return;
+        }
+
+        if (isRegister) {
+            handleRegister();
+        } else {
+            handleLogin();
+        }
+    };
+
+    // =========================
+    // UI
+    // =========================
+
     return (
         <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-zinc-950 via-purple-950 to-black flex items-center justify-center px-4 py-8">
+
             <FloatingIcons />
 
             <div className="absolute w-96 h-96 bg-purple-600/20 blur-[140px] rounded-full top-10 left-10"></div>
@@ -167,26 +192,17 @@ function Login({ setIsLoggedIn, onForgotPassword }) {
                         : "Sign in to your Personal Hub"}
                 </p>
 
-                <form
-                    onSubmit={(e) => {
-                        e.preventDefault();
-
-                        if (loading) return;
-
-                        if (isRegister) {
-                            handleRegister();
-                        } else {
-                            handleLogin();
-                        }
-                    }}
-                >
+                <form onSubmit={handleSubmit}>
                     <input
                         type="text"
                         placeholder="Username"
                         value={username}
-                        onChange={(e) => setUsername(e.target.value)}
+                        onChange={(event) =>
+                            setUsername(event.target.value)
+                        }
                         autoComplete="username"
                         required
+                        disabled={loading}
                         className="w-full bg-black/30 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:border-purple-500 transition-all mb-4"
                     />
 
@@ -195,9 +211,12 @@ function Login({ setIsLoggedIn, onForgotPassword }) {
                             type="email"
                             placeholder="Email"
                             value={email}
-                            onChange={(e) => setEmail(e.target.value)}
+                            onChange={(event) =>
+                                setEmail(event.target.value)
+                            }
                             autoComplete="email"
                             required
+                            disabled={loading}
                             className="w-full bg-black/30 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:border-purple-500 transition-all mb-4"
                         />
                     )}
@@ -206,11 +225,16 @@ function Login({ setIsLoggedIn, onForgotPassword }) {
                         type="password"
                         placeholder="Password"
                         value={password}
-                        onChange={(e) => setPassword(e.target.value)}
+                        onChange={(event) =>
+                            setPassword(event.target.value)
+                        }
                         autoComplete={
-                            isRegister ? "new-password" : "current-password"
+                            isRegister
+                                ? "new-password"
+                                : "current-password"
                         }
                         required
+                        disabled={loading}
                         className="w-full bg-black/30 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:border-purple-500 transition-all mb-4"
                     />
 
@@ -219,6 +243,7 @@ function Login({ setIsLoggedIn, onForgotPassword }) {
                             <button
                                 type="button"
                                 onClick={onForgotPassword}
+                                disabled={loading}
                                 className="text-sm text-purple-300 hover:text-white transition-colors"
                             >
                                 Forgot Password?
@@ -231,9 +256,12 @@ function Login({ setIsLoggedIn, onForgotPassword }) {
                             type="password"
                             placeholder="Confirm Password"
                             value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            onChange={(event) =>
+                                setConfirmPassword(event.target.value)
+                            }
                             autoComplete="new-password"
                             required
+                            disabled={loading}
                             className="w-full bg-black/30 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:border-purple-500 transition-all mb-6"
                         />
                     )}
@@ -241,8 +269,7 @@ function Login({ setIsLoggedIn, onForgotPassword }) {
                     <button
                         type="submit"
                         disabled={loading}
-                        className={`w-full mt-2 py-4 rounded-2xl font-bold text-white transition-all duration-300 shadow-lg
-                        ${
+                        className={`w-full mt-2 py-4 rounded-2xl font-bold text-white transition-all duration-300 shadow-lg ${
                             loading
                                 ? "bg-gray-600 cursor-not-allowed"
                                 : "bg-gradient-to-r from-purple-600 to-blue-600 hover:scale-[1.02] shadow-purple-500/30 hover:shadow-purple-500/50 active:scale-95"
@@ -265,7 +292,12 @@ function Login({ setIsLoggedIn, onForgotPassword }) {
 
                             <button
                                 type="button"
-                                onClick={() => setIsRegister(false)}
+                                onClick={() => {
+                                    if (!loading) {
+                                        setIsRegister(false);
+                                    }
+                                }}
+                                disabled={loading}
                                 className="ml-2 text-purple-400 hover:text-purple-300"
                             >
                                 Login
@@ -277,7 +309,12 @@ function Login({ setIsLoggedIn, onForgotPassword }) {
 
                             <button
                                 type="button"
-                                onClick={() => setIsRegister(true)}
+                                onClick={() => {
+                                    if (!loading) {
+                                        setIsRegister(true);
+                                    }
+                                }}
+                                disabled={loading}
                                 className="ml-2 text-purple-400 hover:text-purple-300"
                             >
                                 Create Account

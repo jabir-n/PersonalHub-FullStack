@@ -7,17 +7,23 @@ import Dashboard from "./components/Dashboard";
 import ForgotPassword from "./components/ForgotPassword";
 import ResetPassword from "./components/ResetPassword";
 
+const API_BASE = "http://127.0.0.1:8000/api";
+
 function App() {
   const [selectedMenu, setSelectedMenu] = useState("Dashboard");
   const [searchTerm, setSearchTerm] = useState("");
+
   const [links, setLinks] = useState([]);
   const [categories, setCategories] = useState([]);
   const [profile, setProfile] = useState(null);
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authChecking, setAuthChecking] = useState(true);
 
   // Email verification
-  const [verificationStatus, setVerificationStatus] = useState("checking");
+  const [verificationStatus, setVerificationStatus] =
+    useState("checking");
+
   const verificationStarted = useRef(false);
 
   // Forgot password
@@ -25,18 +31,143 @@ function App() {
 
   // Reset password
   const [showResetPassword, setShowResetPassword] = useState(false);
+
   const [resetPasswordData, setResetPasswordData] = useState({
     uid: "",
     token: "",
   });
 
-  // Check whether the user is already logged in
-  useEffect(() => {
-    const accessToken = localStorage.getItem("access");
+  // Clear authentication and user-specific data
+  const clearAuthentication = () => {
+    localStorage.removeItem("access");
+    localStorage.removeItem("refresh");
 
-    if (accessToken) {
-      setIsLoggedIn(true);
+    setLinks([]);
+    setCategories([]);
+    setProfile(null);
+
+    setSelectedMenu("Dashboard");
+    setSearchTerm("");
+
+    setIsLoggedIn(false);
+  };
+
+  // Refresh the access token using the saved refresh token
+  async function refreshAccessToken() {
+    const refreshToken = localStorage.getItem("refresh");
+
+    if (!refreshToken) {
+      return null;
     }
+
+    try {
+      const response = await fetch(`${API_BASE}/refresh/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          refresh: refreshToken,
+        }),
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const data = await response.json();
+
+      if (!data.access) {
+        return null;
+      }
+
+      localStorage.setItem("access", data.access);
+
+      // Supports refresh-token rotation if enabled in Django settings.
+      if (data.refresh) {
+        localStorage.setItem("refresh", data.refresh);
+      }
+
+      return data.access;
+    } catch (error) {
+      console.error("Token refresh failed:", error);
+      return null;
+    }
+  }
+
+  // Check whether an access token can authenticate the user
+  async function validateAccessToken(token) {
+    return fetch(`${API_BASE}/links/`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  }
+
+  // Check authentication when the application opens
+  useEffect(() => {
+    let cancelled = false;
+
+    async function checkAuthentication() {
+      setAuthChecking(true);
+
+      const accessToken = localStorage.getItem("access");
+
+      if (!accessToken) {
+        if (!cancelled) {
+          setIsLoggedIn(false);
+          setAuthChecking(false);
+        }
+
+        return;
+      }
+
+      try {
+        let response = await validateAccessToken(accessToken);
+
+        if (cancelled) return;
+
+        // If the access token expired, try refreshing it.
+        if (response.status === 401) {
+          const newAccessToken = await refreshAccessToken();
+
+          if (cancelled) return;
+
+          if (newAccessToken) {
+            response = await validateAccessToken(newAccessToken);
+          }
+        }
+
+        if (cancelled) return;
+
+        if (response.ok) {
+          setIsLoggedIn(true);
+        } else if (response.status === 401) {
+          clearAuthentication();
+        } else {
+          // Keep tokens if the server returns another error.
+          // Do not display the dashboard without confirming access.
+          setIsLoggedIn(false);
+        }
+      } catch (error) {
+        console.error("Authentication check failed:", error);
+
+        if (!cancelled) {
+          // A network failure is not proof that the token is invalid.
+          setIsLoggedIn(false);
+        }
+      } finally {
+        if (!cancelled) {
+          setAuthChecking(false);
+        }
+      }
+    }
+
+    checkAuthentication();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Handle email verification links
@@ -53,10 +184,10 @@ function App() {
 
     verificationStarted.current = true;
 
-    const parts = path.split("/");
+    const parts = path.split("/").filter(Boolean);
 
-    const uid = parts[2];
-    const token = parts[3];
+    const uid = parts[1];
+    const token = parts[2];
 
     if (!uid || !token) {
       setVerificationStatus("invalid");
@@ -66,7 +197,7 @@ function App() {
     async function verifyEmail() {
       try {
         const response = await fetch(
-          `http://127.0.0.1:8000/api/verify-email/${uid}/${token}/`
+          `${API_BASE}/verify-email/${uid}/${token}/`
         );
 
         const data = await response.json();
@@ -78,7 +209,7 @@ function App() {
             setVerificationStatus("success");
           }
         } else {
-          console.log("Email verification failed:", data);
+          console.error("Email verification failed:", data);
           setVerificationStatus("invalid");
         }
       } catch (error) {
@@ -90,8 +221,7 @@ function App() {
     verifyEmail();
   }, []);
 
-  // Detect reset-password links
-  // Detect reset-password links
+  // Detect password-reset links
   useEffect(() => {
     const pathname = window.location.pathname;
     const parts = pathname.split("/").filter(Boolean);
@@ -110,90 +240,113 @@ function App() {
     }
   }, []);
 
-  // Load links, categories, and profile after login
+  // Load links, categories, and profile after authentication
   useEffect(() => {
     if (!isLoggedIn) {
       return;
     }
 
-    async function fetchLinks() {
+    let cancelled = false;
+
+    async function fetchAuthenticatedData() {
       try {
-        const token = localStorage.getItem("access");
+        let token = localStorage.getItem("access");
 
-        const response = await fetch(
-          "http://127.0.0.1:8000/api/links/",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (!response.ok) {
-          console.log("Failed to load links");
+        if (!token) {
+          clearAuthentication();
           return;
         }
 
-        const data = await response.json();
-        setLinks(data);
-      } catch (error) {
-        console.error("Error loading links:", error);
-      }
-    }
-
-    async function fetchCategories() {
-      try {
-        const token = localStorage.getItem("access");
-
-        const response = await fetch(
-          "http://127.0.0.1:8000/api/categories/",
-          {
+        async function authenticatedFetch(path) {
+          let response = await fetch(`${API_BASE}${path}`, {
             headers: {
               Authorization: `Bearer ${token}`,
             },
-          }
-        );
+          });
 
-        if (!response.ok) {
-          console.log("Failed to load categories");
+          if (response.status === 401) {
+            const newToken = await refreshAccessToken();
+
+            if (newToken) {
+              token = newToken;
+
+              response = await fetch(`${API_BASE}${path}`, {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              });
+            }
+          }
+
+          return response;
+        }
+
+        const [linksResponse, categoriesResponse, profileResponse] =
+          await Promise.all([
+            authenticatedFetch("/links/"),
+            authenticatedFetch("/categories/"),
+            authenticatedFetch("/profile/"),
+          ]);
+
+        if (cancelled) return;
+
+        // If authentication failed, return to the login screen.
+        if (
+          linksResponse.status === 401 ||
+          categoriesResponse.status === 401 ||
+          profileResponse.status === 401
+        ) {
+          clearAuthentication();
           return;
         }
 
-        const data = await response.json();
-        setCategories(data);
-      } catch (error) {
-        console.error("Error loading categories:", error);
-      }
-    }
+        if (linksResponse.ok) {
+          const data = await linksResponse.json();
 
-    async function fetchProfile() {
-      try {
-        const token = localStorage.getItem("access");
-
-        const response = await fetch(
-          "http://127.0.0.1:8000/api/profile/",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+          if (!cancelled) {
+            setLinks(data);
           }
-        );
-
-        if (!response.ok) {
-          console.log("Failed to load profile");
-          return;
+        } else {
+          console.error("Failed to load links:", linksResponse.status);
         }
 
-        const data = await response.json();
-        setProfile(data);
+        if (categoriesResponse.ok) {
+          const data = await categoriesResponse.json();
+
+          if (!cancelled) {
+            setCategories(data);
+          }
+        } else {
+          console.error(
+            "Failed to load categories:",
+            categoriesResponse.status
+          );
+        }
+
+        if (profileResponse.ok) {
+          const data = await profileResponse.json();
+
+          if (!cancelled) {
+            setProfile(data);
+          }
+        } else {
+          console.error(
+            "Failed to load profile:",
+            profileResponse.status
+          );
+        }
       } catch (error) {
-        console.error("Error loading profile:", error);
+        if (!cancelled) {
+          console.error("Error loading dashboard data:", error);
+        }
       }
     }
 
-    fetchLinks();
-    fetchCategories();
-    fetchProfile();
+    fetchAuthenticatedData();
+
+    return () => {
+      cancelled = true;
+    };
   }, [isLoggedIn]);
 
   // Email verification screens
@@ -291,7 +444,7 @@ function App() {
     );
   }
 
-  // Reset-password screen
+  // Password-reset screen
   if (showResetPassword) {
     return (
       <ResetPassword
@@ -301,6 +454,7 @@ function App() {
           window.history.replaceState({}, "", "/");
 
           setShowResetPassword(false);
+
           setResetPasswordData({
             uid: "",
             token: "",
@@ -309,6 +463,23 @@ function App() {
           setShowForgotPassword(false);
         }}
       />
+    );
+  }
+
+  // Show a loading screen while authentication is checked
+  if (authChecking) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-purple-950 to-black flex items-center justify-center">
+        <div className="text-center text-white">
+          <h1 className="text-3xl font-bold mb-3">
+            PersonalHub
+          </h1>
+
+          <p className="text-zinc-400">
+            Checking your session...
+          </p>
+        </div>
+      </div>
     );
   }
 
@@ -336,7 +507,7 @@ function App() {
 
   // Main dashboard
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-black to-zinc-900 flex">
+    <div className="app-shell min-h-screen bg-gradient-to-br from-zinc-950 via-black to-zinc-900 flex flex-col md:flex-row">
       <Sidebar
         selectedMenu={selectedMenu}
         setSelectedMenu={setSelectedMenu}
@@ -345,13 +516,19 @@ function App() {
         setCategories={setCategories}
       />
 
-      <div className="flex-1">
+      <div className="app-main min-w-0 flex-1">
         <Navbar
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
           profile={profile}
           setProfile={setProfile}
-          setIsLoggedIn={setIsLoggedIn}
+          setIsLoggedIn={(value) => {
+            if (!value) {
+              clearAuthentication();
+            } else {
+              setIsLoggedIn(true);
+            }
+          }}
         />
 
         <Dashboard

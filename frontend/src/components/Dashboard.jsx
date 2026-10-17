@@ -82,15 +82,15 @@ function Dashboard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="p-8"
+      className="p-4 sm:p-6 md:p-8 min-w-0"
     >
 
       <StatsCards links={links} />
 
 
-      <div className={`relative overflow-hidden mb-8 rounded-[40px]
+      <div className={`relative overflow-hidden mb-8 rounded-3xl md:rounded-[40px]
       bg-gradient-to-br ${getGlow()}
-      border border-white/10 p-10`}>
+      border border-white/10 p-5 sm:p-7 md:p-10`}>
 
         <div className="absolute w-72 h-72 bg-white/10 rounded-full blur-3xl -top-20 -right-20 animate-pulse">
         </div>
@@ -99,9 +99,9 @@ function Dashboard({
         </div>
 
 
-        <div className="relative z-10 flex items-center gap-6">
+        <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
 
-          <div className="w-24 h-24 rounded-3xl bg-white/10 backdrop-blur-xl flex items-center justify-center text-5xl text-white shadow-2xl">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 shrink-0 rounded-2xl md:rounded-3xl bg-white/10 backdrop-blur-xl flex items-center justify-center text-3xl sm:text-4xl md:text-5xl text-white shadow-2xl">
 
             {getIcon()}
 
@@ -110,11 +110,11 @@ function Dashboard({
 
           <div>
 
-            <h2 className="text-4xl font-black text-white mb-3">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-white mb-3 break-words">
               {getHeading()}
             </h2>
 
-            <p className="text-zinc-300 text-lg max-w-2xl leading-8">
+            <p className="text-zinc-300 text-sm sm:text-base md:text-lg max-w-2xl leading-6 sm:leading-8">
               Manage your shortcuts, organize platforms,
               and personalize your digital workspace experience.
             </p>

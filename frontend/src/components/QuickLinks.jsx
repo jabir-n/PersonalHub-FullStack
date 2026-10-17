@@ -104,9 +104,27 @@ function QuickLinks({
 
       // Use the server's returned object directly instead of
       // re-fetching the whole list.
-      setLinks((prev) => [...prev, data])
+      if (response.ok) {
+        const selectedCategory = categories.find(
+          (cat) => cat.id === Number(category)
+        );
 
-      toast.success("Link added successfully!")
+        const newLink = {
+          ...data,
+          category:
+            data.category && typeof data.category === "object"
+              ? data.category
+              : selectedCategory,
+        };
+
+        setLinks((prev) => [...prev, newLink]);
+
+        toast.success("Link added successfully!");
+
+        setSiteName("");
+        setSiteUrl("");
+        setCategory("");
+      }
 
       setSiteName("")
       setSiteUrl("")
@@ -196,28 +214,41 @@ function QuickLinks({
     try {
       const response = await authFetch(`/links/${link.id}/`, {
         method: "PATCH",
-        body: JSON.stringify({ favorite: !link.favorite }),
-      })
+        body: JSON.stringify({
+          favorite: !link.favorite,
+        }),
+      });
+
+      const data = await response.json();
 
       if (!response.ok) {
-        toast.error("Failed to update favorite.")
-        return
+        toast.error("Failed to update favorite.");
+        return;
       }
 
-      const updated = await response.json()
-
       setLinks((prev) =>
-        prev.map((l) => (l.id === updated.id ? updated : l))
-      )
+        prev.map((item) => {
+          if (item.id !== data.id) return item;
+
+          return {
+            ...item,
+            ...data,
+            category:
+              data.category && typeof data.category === "object"
+                ? data.category
+                : item.category,
+          };
+        })
+      );
 
       toast.success(
-        link.favorite ? "Removed from favorites." : "Added to favorites."
-      )
+        data.favorite ? "Added to favorites!" : "Removed from favorites!"
+      );
     } catch (error) {
-      console.error(error)
-      toast.error("Unable to connect to the server.")
+      console.error("Error updating favorite:", error);
+      toast.error("Unable to connect to the server.");
     }
-  }
+  };
 
   const startEdit = (link) => {
     setEditingId(link.id)
@@ -229,34 +260,56 @@ function QuickLinks({
   }
 
   const saveEdit = async () => {
+    if (!editingId) return;
+
     try {
       const response = await authFetch(`/links/${editingId}/`, {
         method: "PATCH",
         body: JSON.stringify({
-          name: editForm.name,
-          url: editForm.url,
-          category: editForm.category,
+          name: editForm.name.trim(),
+          url: editForm.url.trim(),
+          category: Number(editForm.category),
         }),
-      })
+      });
+
+      const data = await response.json();
 
       if (!response.ok) {
-        toast.error("Failed to save changes.")
-        return
+        toast.error(
+          data.category?.[0] ||
+          data.detail ||
+          "Failed to save changes."
+        );
+        return;
       }
 
-      const updated = await response.json()
-
+      // Update the link immediately using the server response.
       setLinks((prev) =>
-        prev.map((l) => (l.id === updated.id ? updated : l))
-      )
+        prev.map((link) =>
+          link.id === data.id
+            ? {
+              ...link,
+              ...data,
+              category:
+                data.category &&
+                  typeof data.category === "object"
+                  ? data.category
+                  : categories.find(
+                    (cat) => cat.id === Number(editForm.category)
+                  ) || link.category,
+            }
+            : link
+        )
+      );
 
-      setEditingId(null)
-      toast.success("Link updated successfully!")
+      setEditingId(null);
+
+      toast.success("Link updated successfully!");
     } catch (error) {
-      console.error(error)
-      toast.error("Unable to connect to the server.")
+      console.error("Error updating link:", error);
+      toast.error("Unable to connect to the server.");
     }
-  }
+  };
 
   const handleDragEnd = async (event) => {
     const { active, over } = event
@@ -313,11 +366,11 @@ function QuickLinks({
   )
 
   return (
-    <div className="bg-zinc-900/70 backdrop-blur-xl rounded-3xl p-6 border border-white/10 mt-8">
-      <h2 className="text-white text-3xl font-bold mb-8">Quick Links</h2>
+    <div className="bg-zinc-900/70 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-white/10 mt-5 sm:mt-8 min-w-0">
+      <h2 className="text-white text-2xl sm:text-3xl font-bold mb-5 sm:mb-8">Quick Links</h2>
 
       {selectedMenu === "Dashboard" && (
-        <div className="grid lg:grid-cols-4 md:grid-cols-2 grid-cols-1 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
           <input
             type="text"
             placeholder="Website Name"
@@ -336,7 +389,7 @@ function QuickLinks({
             onKeyDown={handleKeyDown}
           />
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 min-w-0">
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
@@ -356,7 +409,7 @@ function QuickLinks({
 
           <button
             onClick={addLink}
-            className="bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-2xl font-semibold hover:scale-105 transition-all"
+            className="bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-2xl font-semibold py-3 sm:py-0 hover:scale-105 transition-all"
           >
             Add Link
           </button>
@@ -364,8 +417,8 @@ function QuickLinks({
       )}
 
       {filteredLinks.length === 0 ? (
-        <div className="bg-zinc-950/60 border border-dashed border-zinc-700 rounded-3xl p-16 text-center">
-          <h3 className="text-2xl font-bold text-white mb-3">Nothing Here</h3>
+        <div className="bg-zinc-950/60 border border-dashed border-zinc-700 rounded-3xl p-8 sm:p-12 md:p-16 text-center">
+          <h3 className="text-xl sm:text-2xl font-bold text-white mb-3">Nothing Here</h3>
           <p className="text-zinc-400">No links available in this section.</p>
         </div>
       ) : (
@@ -382,11 +435,11 @@ function QuickLinks({
                     animate={{ opacity: 1, y: 0 }}
                     whileHover={{ scale: 1.02 }}
                     transition={{ duration: 0.2 }}
-                    className="bg-zinc-950/90 border border-white/10 rounded-3xl p-6"
+                    className="bg-zinc-950/90 border border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6"
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex gap-5">
-                        <div className="w-20 h-20 bg-white rounded-2xl p-3 flex items-center justify-center">
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                      <div className="flex gap-3 sm:gap-5 min-w-0">
+                        <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 shrink-0 bg-white rounded-xl sm:rounded-2xl p-2 sm:p-3 flex items-center justify-center">
                           <img
                             src={getLogo(link.url)}
                             alt="logo"
@@ -394,7 +447,7 @@ function QuickLinks({
                           />
                         </div>
 
-                        <div>
+                        <div className="min-w-0 flex-1">
                           {editingId === link.id ? (
                             <div className="space-y-3">
                               <input
@@ -443,7 +496,7 @@ function QuickLinks({
                             </div>
                           ) : (
                             <>
-                              <h3 className="text-white text-3xl font-bold mb-2">
+                              <h3 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2 break-words">
                                 {link.name}
                               </h3>
 
@@ -462,7 +515,7 @@ function QuickLinks({
                         </div>
                       </div>
 
-                      <div className="flex gap-4">
+                      <div className="flex flex-wrap items-center gap-4 sm:gap-5 justify-end">
                         <button
                           onClick={() => toggleFavorite(link)}
                           className={`text-3xl ${link.favorite ? "text-yellow-400" : "text-zinc-600"
@@ -495,8 +548,8 @@ function QuickLinks({
       )}
 
       {showCategoryModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-zinc-900 p-6 rounded-2xl w-96">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-zinc-900 p-5 sm:p-6 rounded-2xl w-[calc(100%-2rem)] max-w-sm">
             <h2 className="text-xl font-bold text-white mb-4">Add Category</h2>
 
             <input
