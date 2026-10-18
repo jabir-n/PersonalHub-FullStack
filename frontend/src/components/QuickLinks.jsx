@@ -58,7 +58,7 @@ function QuickLinks({
   const [newCategory, setNewCategory] = useState("")
   const [editingId, setEditingId] = useState(null)
 
-  
+
   const [editForm, setEditForm] = useState({ name: "", url: "", category: "" })
 
   const addLink = async () => {
@@ -100,7 +100,7 @@ function QuickLinks({
         return
       }
 
-      
+
       if (response.ok) {
         const selectedCategory = categories.find(
           (cat) => cat.id === Number(category)
@@ -280,7 +280,7 @@ function QuickLinks({
         return;
       }
 
-      
+
       setLinks((prev) =>
         prev.map((link) =>
           link.id === data.id
@@ -493,7 +493,7 @@ function QuickLinks({
                             </div>
                           ) : (
                             <>
-                              <h3 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2 break-words">
+                              <h3 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2 break-words text-white">
                                 {link.name}
                               </h3>
 
