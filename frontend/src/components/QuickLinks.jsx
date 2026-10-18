@@ -15,15 +15,15 @@ import {
 import { toast } from "react-toastify"
 import Swal from "sweetalert2"
 
-const API_BASE = "https://personalhub-backend-ptlj.onrender.com/api"
+const API_BASE = "https://personalhub-backend-ptlj.onrender.com/api";
 
 
 const getLogo = (url) => {
   try {
     const domain = new URL(url).hostname
-    return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`
+    return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
   } catch {
-    return "https://cdn-icons-png.flaticon.com/512/25/25231.png"
+    return "https://cdn-icons-png.flaticon.com/512/25/25231.png";
   }
 }
 
