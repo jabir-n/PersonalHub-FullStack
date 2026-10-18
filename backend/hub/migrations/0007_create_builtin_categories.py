@@ -17,20 +17,15 @@ def create_builtin_categories(apps, schema_editor):
         )
 
 
-def reverse_builtin_categories(apps, schema_editor):
-    
-    pass
-
-
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("hub", "0001_initial"),
+        ("hub", "0006_alter_category_user"),
     ]
 
     operations = [
         migrations.RunPython(
             create_builtin_categories,
-            reverse_builtin_categories,
+            migrations.RunPython.noop,
         ),
     ]
