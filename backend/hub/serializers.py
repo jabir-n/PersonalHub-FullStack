@@ -6,9 +6,9 @@ from django.contrib.auth.password_validation import validate_password
 from .models import Category, QuickLink, UserProfile
 
 
-# =========================
+
 # CATEGORY SERIALIZER
-# =========================
+
 
 class CategorySerializer(serializers.ModelSerializer):
 
@@ -32,9 +32,9 @@ class CategorySerializer(serializers.ModelSerializer):
         return value
 
 
-# =========================
+
 # QUICK LINK SERIALIZER
-# =========================
+
 
 class QuickLinkSerializer(serializers.ModelSerializer):
 
@@ -45,9 +45,9 @@ class QuickLinkSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-# =========================
+
 # QUICK LINK CREATE / UPDATE
-# =========================
+
 
 class QuickLinkCreateSerializer(serializers.ModelSerializer):
 
@@ -77,8 +77,7 @@ class QuickLinkCreateSerializer(serializers.ModelSerializer):
                 "Authentication is required."
             )
 
-        # Allow built-in categories and the current user's categories.
-        # Reject categories belonging to other users.
+        
         if value.user is not None and value.user != request.user:
             raise serializers.ValidationError(
                 "You cannot use another user's category."
@@ -87,9 +86,9 @@ class QuickLinkCreateSerializer(serializers.ModelSerializer):
         return value
 
 
-# =========================
+
 # USER REGISTRATION
-# =========================
+
 
 class RegisterSerializer(serializers.ModelSerializer):
 
@@ -148,9 +147,9 @@ class RegisterSerializer(serializers.ModelSerializer):
         return user
 
 
-# =========================
+
 # USER PROFILE SERIALIZER
-# =========================
+
 
 class UserProfileSerializer(serializers.ModelSerializer):
 

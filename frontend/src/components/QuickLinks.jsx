@@ -17,8 +17,7 @@ import Swal from "sweetalert2"
 
 const API_BASE = "http://127.0.0.1:8000/api"
 
-// Pure helper — doesn't need to live inside the component,
-// so it's not recreated on every render.
+
 const getLogo = (url) => {
   try {
     const domain = new URL(url).hostname
@@ -28,8 +27,7 @@ const getLogo = (url) => {
   }
 }
 
-// Shared authenticated fetch — replaces the repeated
-// token + headers boilerplate in every handler.
+
 async function authFetch(path, options = {}) {
   const token = localStorage.getItem("access")
 
@@ -60,7 +58,7 @@ function QuickLinks({
   const [newCategory, setNewCategory] = useState("")
   const [editingId, setEditingId] = useState(null)
 
-  // Consolidated from 3 separate useState calls into one object.
+  
   const [editForm, setEditForm] = useState({ name: "", url: "", category: "" })
 
   const addLink = async () => {
@@ -102,8 +100,7 @@ function QuickLinks({
         return
       }
 
-      // Use the server's returned object directly instead of
-      // re-fetching the whole list.
+      
       if (response.ok) {
         const selectedCategory = categories.find(
           (cat) => cat.id === Number(category)
@@ -283,7 +280,7 @@ function QuickLinks({
         return;
       }
 
-      // Update the link immediately using the server response.
+      
       setLinks((prev) =>
         prev.map((link) =>
           link.id === data.id

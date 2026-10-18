@@ -25,7 +25,7 @@ from .serializers import (
 from .tokens import email_verification_token, password_reset_token
 
 
-# CATEGORY APIs
+
 
 class CategoryListAPIView(generics.ListCreateAPIView):
 
@@ -53,7 +53,7 @@ class CategoryDetailAPIView(generics.DestroyAPIView):
         )
 
 
-# QUICK LINK APIs
+
 
 class QuickLinkListAPIView(generics.ListCreateAPIView):
 
@@ -92,7 +92,7 @@ class QuickLinkDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
         return QuickLinkSerializer
 
 
-# USER REGISTRATION AND EMAIL VERIFICATION
+
 
 class RegisterAPIView(generics.CreateAPIView):
 
@@ -188,7 +188,7 @@ class VerifyEmailAPIView(APIView):
         )
 
 
-# UPDATE QUICK LINK ORDER
+
 
 class UpdateLinkOrderAPIView(APIView):
 
@@ -218,7 +218,7 @@ class UpdateLinkOrderAPIView(APIView):
         )
 
 
-# USER PROFILE
+
 
 class UserProfileAPIView(generics.RetrieveUpdateAPIView):
 
@@ -242,7 +242,7 @@ class UserProfileAPIView(generics.RetrieveUpdateAPIView):
         return profile
 
 
-# FORGOT PASSWORD
+
 
 class ForgotPasswordAPIView(APIView):
 
@@ -269,15 +269,15 @@ class ForgotPasswordAPIView(APIView):
                 force_bytes(user.pk)
             )
 
-            # Generate the original Django password-reset token.
+            
             token = password_reset_token.make_token(user)
 
-            # Encode the token to preserve it in the URL path.
+            
             encoded_token = urlsafe_base64_encode(
                 force_bytes(token)
             )
 
-            # IMPORTANT: This must be a plain URL, not Markdown.
+            
             reset_link = (
                 f"http://localhost:5173/reset-password/"
                 f"{uid}/{encoded_token}/"
@@ -296,12 +296,12 @@ class ForgotPasswordAPIView(APIView):
                 recipient_list=[user.email],
             )
 
-            # Print the complete URL separately in the Django terminal.
+            
             print("\n========== PASSWORD RESET LINK ==========")
             print(reset_link)
             print("==========================================\n")
 
-        # Do not reveal whether an email address has an account.
+        
         return Response(
             {
                 "detail": (
@@ -313,7 +313,6 @@ class ForgotPasswordAPIView(APIView):
         )
 
 
-# RESET PASSWORD
 
 class ResetPasswordAPIView(APIView):
 
@@ -357,7 +356,7 @@ class ResetPasswordAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Decode the URL-safe token back to the original Django token.
+        
         try:
             decoded_token = urlsafe_base64_decode(token).decode("utf-8")
 
@@ -372,7 +371,7 @@ class ResetPasswordAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Validate the original Django token.
+        
         if not password_reset_token.check_token(user, decoded_token):
 
             return Response(

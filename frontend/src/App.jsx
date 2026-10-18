@@ -20,16 +20,16 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [authChecking, setAuthChecking] = useState(true);
 
-  // Email verification
+  
   const [verificationStatus, setVerificationStatus] =
     useState("checking");
 
   const verificationStarted = useRef(false);
 
-  // Forgot password
+  
   const [showForgotPassword, setShowForgotPassword] = useState(false);
 
-  // Reset password
+  
   const [showResetPassword, setShowResetPassword] = useState(false);
 
   const [resetPasswordData, setResetPasswordData] = useState({
@@ -37,7 +37,7 @@ function App() {
     token: "",
   });
 
-  // Clear authentication and user-specific data
+  
   const clearAuthentication = () => {
     localStorage.removeItem("access");
     localStorage.removeItem("refresh");
@@ -52,7 +52,7 @@ function App() {
     setIsLoggedIn(false);
   };
 
-  // Refresh the access token using the saved refresh token
+  
   async function refreshAccessToken() {
     const refreshToken = localStorage.getItem("refresh");
 
@@ -83,7 +83,7 @@ function App() {
 
       localStorage.setItem("access", data.access);
 
-      // Supports refresh-token rotation if enabled in Django settings.
+      
       if (data.refresh) {
         localStorage.setItem("refresh", data.refresh);
       }
@@ -95,7 +95,7 @@ function App() {
     }
   }
 
-  // Check whether an access token can authenticate the user
+  
   async function validateAccessToken(token) {
     return fetch(`${API_BASE}/links/`, {
       headers: {
@@ -104,7 +104,7 @@ function App() {
     });
   }
 
-  // Check authentication when the application opens
+  
   useEffect(() => {
     let cancelled = false;
 
@@ -127,7 +127,7 @@ function App() {
 
         if (cancelled) return;
 
-        // If the access token expired, try refreshing it.
+        
         if (response.status === 401) {
           const newAccessToken = await refreshAccessToken();
 
@@ -145,15 +145,14 @@ function App() {
         } else if (response.status === 401) {
           clearAuthentication();
         } else {
-          // Keep tokens if the server returns another error.
-          // Do not display the dashboard without confirming access.
+          
           setIsLoggedIn(false);
         }
       } catch (error) {
         console.error("Authentication check failed:", error);
 
         if (!cancelled) {
-          // A network failure is not proof that the token is invalid.
+          
           setIsLoggedIn(false);
         }
       } finally {
@@ -170,7 +169,7 @@ function App() {
     };
   }, []);
 
-  // Handle email verification links
+  
   useEffect(() => {
     const path = window.location.pathname;
 
@@ -221,7 +220,7 @@ function App() {
     verifyEmail();
   }, []);
 
-  // Detect password-reset links
+  
   useEffect(() => {
     const pathname = window.location.pathname;
     const parts = pathname.split("/").filter(Boolean);
@@ -240,7 +239,7 @@ function App() {
     }
   }, []);
 
-  // Load links, categories, and profile after authentication
+  
   useEffect(() => {
     if (!isLoggedIn) {
       return;
@@ -290,7 +289,7 @@ function App() {
 
         if (cancelled) return;
 
-        // If authentication failed, return to the login screen.
+        
         if (
           linksResponse.status === 401 ||
           categoriesResponse.status === 401 ||
@@ -349,7 +348,7 @@ function App() {
     };
   }, [isLoggedIn]);
 
-  // Email verification screens
+  
   if (window.location.pathname.startsWith("/verify-email/")) {
     if (verificationStatus === "checking") {
       return (
@@ -444,7 +443,7 @@ function App() {
     );
   }
 
-  // Password-reset screen
+  
   if (showResetPassword) {
     return (
       <ResetPassword
@@ -466,7 +465,7 @@ function App() {
     );
   }
 
-  // Show a loading screen while authentication is checked
+  
   if (authChecking) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-purple-950 to-black flex items-center justify-center">
@@ -483,7 +482,7 @@ function App() {
     );
   }
 
-  // Login and forgot-password screens
+  
   if (!isLoggedIn) {
     if (showForgotPassword) {
       return (
@@ -505,7 +504,7 @@ function App() {
     );
   }
 
-  // Main dashboard
+  
   return (
     <div className="app-shell min-h-screen bg-gradient-to-br from-zinc-950 via-black to-zinc-900 flex flex-col md:flex-row">
       <Sidebar

@@ -1,6 +1,4 @@
-# =========================
-# PYTHON
-# =========================
+
 __pycache__/
 *.py[cod]
 *.pyo
@@ -8,15 +6,11 @@ __pycache__/
 backend/venv/
 backend/.venv/
 
-# =========================
-# DJANGO
-# =========================
+
 backend/db.sqlite3
 backend/media/
 
-# =========================
-# ENVIRONMENT FILES
-# =========================
+
 .env
 .env.*
 !.env.example
@@ -29,19 +23,13 @@ frontend/.env
 frontend/.env.*
 !frontend/.env.example
 
-# =========================
-# NODE / REACT / VITE
-# =========================
+
 frontend/node_modules/
 frontend/dist/
 
-# =========================
-# IDE
-# =========================
+
 .vscode/
 
-# =========================
-# OPERATING SYSTEM
-# =========================
+
 .DS_Store
 Thumbs.db

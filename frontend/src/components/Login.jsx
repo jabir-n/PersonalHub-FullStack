@@ -13,9 +13,7 @@ function Login({ setIsLoggedIn, onForgotPassword }) {
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
 
-    // =========================
-    // LOGIN
-    // =========================
+    
 
     const handleLogin = async () => {
         if (!username.trim() || !password) {
@@ -44,13 +42,13 @@ function Login({ setIsLoggedIn, onForgotPassword }) {
                 data.access &&
                 data.refresh
             ) {
-                // Store tokens only after successful authentication.
+                
                 localStorage.setItem("access", data.access);
                 localStorage.setItem("refresh", data.refresh);
 
                 toast.success("Login successful!");
 
-                // Tell App.jsx to display the dashboard.
+                
                 setIsLoggedIn(true);
             } else {
                 toast.error(
@@ -66,9 +64,7 @@ function Login({ setIsLoggedIn, onForgotPassword }) {
         }
     };
 
-    // =========================
-    // REGISTER
-    // =========================
+    
 
     const handleRegister = async () => {
         if (
@@ -108,7 +104,7 @@ function Login({ setIsLoggedIn, onForgotPassword }) {
                     "Account created! Check your email to verify your account."
                 );
 
-                // Return to login after successful registration.
+                
                 setIsRegister(false);
                 setUsername("");
                 setEmail("");
@@ -135,9 +131,7 @@ function Login({ setIsLoggedIn, onForgotPassword }) {
         }
     };
 
-    // =========================
-    // FORM SUBMISSION
-    // =========================
+
 
     const handleSubmit = (event) => {
         event.preventDefault();
