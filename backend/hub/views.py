@@ -1,8 +1,9 @@
 import logging
 
+
 from django.conf import settings
+from .email_utils import send_resend_email
 from django.contrib.auth.models import User
-from django.core.mail import send_mail
 from django.db.models import Q
 from django.utils.encoding import force_bytes
 from django.utils.http import (
@@ -123,8 +124,9 @@ class RegisterAPIView(generics.CreateAPIView):
         )
 
         try:
-            send_mail(
+            send_resend_email(
                 subject="Verify your PersonalHub account",
+                recipient=user.email,
                 message=(
                     "Welcome to PersonalHub!\n\n"
                     "Verify your email by opening this link:\n\n"
@@ -132,9 +134,6 @@ class RegisterAPIView(generics.CreateAPIView):
                     "If you did not create this account, "
                     "please ignore this email."
                 ),
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[user.email],
-                fail_silently=False,
             )
 
         except Exception:
@@ -143,7 +142,6 @@ class RegisterAPIView(generics.CreateAPIView):
                 user.pk,
             )
 
-            
             return Response(
                 {
                     "detail": (
@@ -336,8 +334,9 @@ class ForgotPasswordAPIView(APIView):
             )
 
             try:
-                send_mail(
+                send_resend_email(
                     subject="Reset your PersonalHub password",
+                    recipient=user.email,
                     message=(
                         "We received a request to reset "
                         "your PersonalHub password.\n\n"
@@ -346,9 +345,6 @@ class ForgotPasswordAPIView(APIView):
                         "If you did not request a password reset, "
                         "you can ignore this email."
                     ),
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[user.email],
-                    fail_silently=False,
                 )
 
             except Exception:
