@@ -24,7 +24,7 @@ function ResetPassword({ uid, token, onBackToLogin }) {
 
         try {
             const response = await fetch(
-                `http://127.0.0.1:8000/api/reset-password/${uid}/${token}/`,
+                `https://personalhub-backend-ptlj.onrender.com/api/reset-password/${uid}/${token}/`,
                 {
                     method: "POST",
                     headers: {

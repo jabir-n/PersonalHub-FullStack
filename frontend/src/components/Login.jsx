@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import FloatingIcons from "./FloatingIcons";
 import { toast } from "react-toastify";
 
-const API_BASE = "http://127.0.0.1:8000/api";
+const API_BASE = "https://personalhub-backend-ptlj.onrender.com/api"    ;
 
 function Login({ setIsLoggedIn, onForgotPassword }) {
     const [isRegister, setIsRegister] = useState(false);

@@ -15,7 +15,7 @@ import {
 import { toast } from "react-toastify"
 import Swal from "sweetalert2"
 
-const API_BASE = "http://127.0.0.1:8000/api"
+const API_BASE = "https://personalhub-backend-ptlj.onrender.com/api"
 
 
 const getLogo = (url) => {

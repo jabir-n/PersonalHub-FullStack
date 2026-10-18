@@ -52,7 +52,7 @@ function Sidebar({
     const token = localStorage.getItem("access");
 
     const response = await fetch(
-      `http://127.0.0.1:8000/api/categories/${id}/`,
+      `https://personalhub-backend-ptlj.onrender.com/api/categories/${id}/`,
       {
         method: "DELETE",
         headers: {

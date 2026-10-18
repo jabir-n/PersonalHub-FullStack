@@ -7,7 +7,7 @@ import Dashboard from "./components/Dashboard";
 import ForgotPassword from "./components/ForgotPassword";
 import ResetPassword from "./components/ResetPassword";
 
-const API_BASE = "http://127.0.0.1:8000/api";
+const API_BASE = "https://personalhub-backend-ptlj.onrender.com/api";
 
 function App() {
   const [selectedMenu, setSelectedMenu] = useState("Dashboard");
@@ -20,16 +20,12 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [authChecking, setAuthChecking] = useState(true);
 
-  
   const [verificationStatus, setVerificationStatus] =
     useState("checking");
 
   const verificationStarted = useRef(false);
 
-  
   const [showForgotPassword, setShowForgotPassword] = useState(false);
-
-  
   const [showResetPassword, setShowResetPassword] = useState(false);
 
   const [resetPasswordData, setResetPasswordData] = useState({
@@ -83,7 +79,6 @@ function App() {
 
       localStorage.setItem("access", data.access);
 
-      
       if (data.refresh) {
         localStorage.setItem("refresh", data.refresh);
       }
@@ -127,7 +122,6 @@ function App() {
 
         if (cancelled) return;
 
-        
         if (response.status === 401) {
           const newAccessToken = await refreshAccessToken();
 
@@ -145,14 +139,17 @@ function App() {
         } else if (response.status === 401) {
           clearAuthentication();
         } else {
-          
+          console.error(
+            "Session validation failed:",
+            response.status
+          );
+
           setIsLoggedIn(false);
         }
       } catch (error) {
         console.error("Authentication check failed:", error);
 
         if (!cancelled) {
-          
           setIsLoggedIn(false);
         }
       } finally {
@@ -256,6 +253,7 @@ function App() {
           return;
         }
 
+        
         async function authenticatedFetch(path) {
           let response = await fetch(`${API_BASE}${path}`, {
             headers: {
@@ -280,12 +278,15 @@ function App() {
           return response;
         }
 
-        const [linksResponse, categoriesResponse, profileResponse] =
-          await Promise.all([
-            authenticatedFetch("/links/"),
-            authenticatedFetch("/categories/"),
-            authenticatedFetch("/profile/"),
-          ]);
+        const [
+          linksResponse,
+          categoriesResponse,
+          profileResponse,
+        ] = await Promise.all([
+          authenticatedFetch("/links/"),
+          authenticatedFetch("/categories/"),
+          authenticatedFetch("/profile/"),
+        ]);
 
         if (cancelled) return;
 
@@ -299,6 +300,7 @@ function App() {
           return;
         }
 
+        
         if (linksResponse.ok) {
           const data = await linksResponse.json();
 
@@ -306,9 +308,13 @@ function App() {
             setLinks(data);
           }
         } else {
-          console.error("Failed to load links:", linksResponse.status);
+          console.error(
+            "Failed to load links:",
+            linksResponse.status
+          );
         }
 
+        
         if (categoriesResponse.ok) {
           const data = await categoriesResponse.json();
 
@@ -322,6 +328,7 @@ function App() {
           );
         }
 
+        
         if (profileResponse.ok) {
           const data = await profileResponse.json();
 
@@ -336,7 +343,10 @@ function App() {
         }
       } catch (error) {
         if (!cancelled) {
-          console.error("Error loading dashboard data:", error);
+          console.error(
+            "Error loading dashboard data:",
+            error
+          );
         }
       }
     }

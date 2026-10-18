@@ -1,12 +1,11 @@
-const API_URL = "http://127.0.0.1:8000"
+const API_URL = "https://personalhub-backend-ptlj.onrender.com"
 
 export async function apiFetch(url, options = {}) {
-
     let token = localStorage.getItem("access")
 
     options.headers = {
         ...options.headers,
-        Authorization: `Bearer ${token}`,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
     }
 
     let response = await fetch(
@@ -25,7 +24,7 @@ export async function apiFetch(url, options = {}) {
     }
 
     const refreshResponse = await fetch(
-        API_URL + "/api/refresh/",
+        `${API_URL}/api/refresh/`,
         {
             method: "POST",
             headers: {
@@ -38,23 +37,16 @@ export async function apiFetch(url, options = {}) {
     )
 
     if (!refreshResponse.ok) {
-
         localStorage.removeItem("access")
         localStorage.removeItem("refresh")
-
         return response
-
     }
 
     const refreshData = await refreshResponse.json()
 
-    localStorage.setItem(
-        "access",
-        refreshData.access
-    )
+    localStorage.setItem("access", refreshData.access)
 
-    options.headers.Authorization =
-        `Bearer ${refreshData.access}`
+    options.headers.Authorization = `Bearer ${refreshData.access}`
 
     response = await fetch(
         API_URL + url,
@@ -62,5 +54,4 @@ export async function apiFetch(url, options = {}) {
     )
 
     return response
-
 }
