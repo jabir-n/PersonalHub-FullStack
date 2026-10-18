@@ -7,7 +7,7 @@ from .models import Category, QuickLink, UserProfile
 
 
 
-# CATEGORY SERIALIZER
+
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -33,7 +33,7 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 
-# QUICK LINK SERIALIZER
+
 
 
 class QuickLinkSerializer(serializers.ModelSerializer):
@@ -46,7 +46,7 @@ class QuickLinkSerializer(serializers.ModelSerializer):
 
 
 
-# QUICK LINK CREATE / UPDATE
+
 
 
 class QuickLinkCreateSerializer(serializers.ModelSerializer):
@@ -87,7 +87,7 @@ class QuickLinkCreateSerializer(serializers.ModelSerializer):
 
 
 
-# USER REGISTRATION
+
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -148,7 +148,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 
 
-# USER PROFILE SERIALIZER
+
 
 
 class UserProfileSerializer(serializers.ModelSerializer):

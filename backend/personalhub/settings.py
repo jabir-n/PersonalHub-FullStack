@@ -209,3 +209,8 @@ if not DEBUG:
     SECURE_CONTENT_TYPE_NOSNIFF = True
 
     X_FRAME_OPTIONS = "DENY"
+
+FRONTEND_URL = os.getenv(
+    "FRONTEND_URL",
+    "https://personal-hub-dash-board.vercel.app",
+).rstrip("/")
