@@ -1,21 +1,32 @@
 import { useState } from "react";
 import { toast } from "react-toastify";
 
+const API_BASE = "https://personalhub-backend-ptlj.onrender.com/api";
+
 function ResetPassword({ uid, token, onBackToLogin }) {
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
 
     const handleResetPassword = async (e) => {
         e.preventDefault();
 
+        if (loading) return;
+
+        setErrorMessage("");
+
         if (password.length < 6) {
+            setErrorMessage(
+                "Password must be at least 6 characters."
+            );
             toast.warning("Password must be at least 6 characters.");
             return;
         }
 
         if (password !== confirmPassword) {
+            setErrorMessage("Passwords do not match.");
             toast.warning("Passwords do not match.");
             return;
         }
@@ -24,7 +35,7 @@ function ResetPassword({ uid, token, onBackToLogin }) {
 
         try {
             const response = await fetch(
-                `https://personalhub-backend-ptlj.onrender.com/api/reset-password/${uid}/${token}/`,
+                `${API_BASE}/reset-password/${encodeURIComponent(uid)}/${encodeURIComponent(token)}/`,
                 {
                     method: "POST",
                     headers: {
@@ -36,30 +47,53 @@ function ResetPassword({ uid, token, onBackToLogin }) {
                 }
             );
 
-            const data = await response.json();
+            const responseText = await response.text();
 
-            if (response.ok) {
-                setSuccess(true);
-                setPassword("");
-                setConfirmPassword("");
+            let data = {};
 
-                toast.success("Password reset successfully!");
-            } else {
-                toast.error(
-                    data.detail || "Unable to reset password."
-                );
+            try {
+                data = responseText ? JSON.parse(responseText) : {};
+            } catch {
+                data = {};
             }
+
+            if (!response.ok) {
+                let message = "Unable to reset password. Please try again.";
+
+                if (Array.isArray(data.detail)) {
+                    message = data.detail.join(" ");
+                } else if (typeof data.detail === "string") {
+                    message = data.detail;
+                } else if (typeof data === "string" && data) {
+                    message = data;
+                }
+
+                setErrorMessage(message);
+                toast.error(message);
+                return;
+            }
+
+            setSuccess(true);
+            setPassword("");
+            setConfirmPassword("");
+            setErrorMessage("");
+
+            toast.success("Password reset successfully!");
         } catch (error) {
-            console.error(error);
-            toast.error("Unable to connect to the server.");
+            console.error("Password reset error:", error);
+
+            const message =
+                "Unable to connect to the server. Please try again.";
+
+            setErrorMessage(message);
+            toast.error(message);
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-purple-950 to-black flex items-center justify-center px-4">
-
+        <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-purple-950 to-black flex items-center justify-center px-4 py-8">
             <div className="w-full max-w-md rounded-3xl border border-white/10 bg-white/10 p-8 shadow-2xl backdrop-blur-xl">
 
                 {!success ? (
@@ -73,42 +107,71 @@ function ResetPassword({ uid, token, onBackToLogin }) {
                         </p>
 
                         <form onSubmit={handleResetPassword}>
-                            <label className="mb-2 block text-sm text-zinc-300">
+                            <label
+                                htmlFor="new-password"
+                                className="mb-2 block text-sm text-zinc-300"
+                            >
                                 New Password
                             </label>
 
                             <input
+                                id="new-password"
                                 type="password"
                                 value={password}
-                                onChange={(e) => setPassword(e.target.value)}
+                                onChange={(e) => {
+                                    setPassword(e.target.value);
+                                    setErrorMessage("");
+                                }}
                                 placeholder="Enter new password"
                                 autoComplete="new-password"
                                 minLength={6}
                                 required
-                                className="mb-5 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-purple-500"
+                                disabled={loading}
+                                className="mb-5 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-purple-500 disabled:opacity-50"
                             />
 
-                            <label className="mb-2 block text-sm text-zinc-300">
+                            <label
+                                htmlFor="confirm-password"
+                                className="mb-2 block text-sm text-zinc-300"
+                            >
                                 Confirm Password
                             </label>
 
                             <input
+                                id="confirm-password"
                                 type="password"
                                 value={confirmPassword}
-                                onChange={(e) =>
-                                    setConfirmPassword(e.target.value)
-                                }
+                                onChange={(e) => {
+                                    setConfirmPassword(e.target.value);
+                                    setErrorMessage("");
+                                }}
                                 placeholder="Confirm new password"
                                 autoComplete="new-password"
                                 minLength={6}
                                 required
-                                className="mb-6 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-purple-500"
+                                disabled={loading}
+                                className="mb-4 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-purple-500 disabled:opacity-50"
                             />
+
+                            <p className="mb-5 text-xs leading-5 text-zinc-400">
+                                Choose a password that meets the security
+                                requirements. Passwords containing only numbers
+                                or commonly used passwords may be rejected.
+                            </p>
+
+                            {errorMessage && (
+                                <div
+                                    role="alert"
+                                    className="mb-5 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm leading-6 text-red-300 break-words"
+                                >
+                                    {errorMessage}
+                                </div>
+                            )}
 
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 py-3 font-bold text-white transition hover:opacity-90 disabled:opacity-50"
+                                className="w-full rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 py-3 font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 {loading
                                     ? "Resetting Password..."
@@ -135,7 +198,6 @@ function ResetPassword({ uid, token, onBackToLogin }) {
                         </button>
                     </>
                 )}
-
             </div>
         </div>
     );
