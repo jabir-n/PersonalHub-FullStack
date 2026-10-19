@@ -1,23 +1,80 @@
+import logging
 import os
-import resend
+
+import requests
+
+
+logger = logging.getLogger(__name__)
+
+BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
 
 
 def send_resend_email(subject, recipient, message):
-    api_key = os.getenv("RESEND_API_KEY")
+    """
+    Send a transactional email through Brevo.
 
-    if not api_key:
-        raise RuntimeError("RESEND_API_KEY is not configured.")
+    The existing function name is retained so that
+    views.py does not need to change.
+    """
 
-    sender = os.getenv(
-        "RESEND_FROM_EMAIL",
-        "onboarding@resend.dev",
+    api_key = os.getenv("BREVO_API_KEY")
+
+    sender_email = os.getenv(
+        "DEFAULT_FROM_EMAIL",
+        "personalhub.notifications@gmail.com",
     )
 
-    resend.api_key = api_key
+    if not api_key:
+        raise RuntimeError(
+            "BREVO_API_KEY is not configured."
+        )
 
-    return resend.Emails.send({
-        "from": sender,
-        "to": [recipient],
+    payload = {
+        "sender": {
+            "name": "PersonalHub",
+            "email": sender_email,
+        },
+        "to": [
+            {
+                "email": recipient,
+            }
+        ],
         "subject": subject,
-        "text": message,
-    })
+        "textContent": message,
+    }
+
+    headers = {
+        "accept": "application/json",
+        "api-key": api_key,
+        "content-type": "application/json",
+    }
+
+    try:
+        response = requests.post(
+            BREVO_API_URL,
+            json=payload,
+            headers=headers,
+            timeout=20,
+        )
+
+        if not response.ok:
+            logger.error(
+                "Brevo email failed. Status: %s, Response: %s",
+                response.status_code,
+                response.text,
+            )
+
+            response.raise_for_status()
+
+        logger.info(
+            "Email successfully submitted to Brevo for %s",
+            recipient,
+        )
+
+        return response.json()
+
+    except requests.RequestException:
+        logger.exception(
+            "Failed to send email through Brevo."
+        )
+        raise
