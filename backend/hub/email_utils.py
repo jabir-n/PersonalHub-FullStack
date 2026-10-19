@@ -10,12 +10,7 @@ BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
 
 
 def send_resend_email(subject, recipient, message):
-    """
-    Send a transactional email through Brevo.
 
-    The existing function name is retained so that
-    views.py does not need to change.
-    """
 
     api_key = os.getenv("BREVO_API_KEY")
 
